@@ -1,0 +1,77 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install production dependencies
+        run: npm ci --production
+      
+      - name: Deploy notification
+        run: |
+          echo "✅ Build completed successfully!"
+          echo "📦 Artifacts ready for deployment"
+          echo ""
+          echo "To deploy, connect your repository to one of these platforms:"
+          echo "  - Railway: https://railway.app"
+          echo "  - Render: https://render.com"
+          echo "  - Fly.io: https://fly.io"
+          echo ""
+          echo "Required environment variables:"
+          echo "  - DATABASE_URL"
+          echo "  - SESSION_SECRET"
+          echo "  - PORT (optional, defaults to 3000)"
+          echo "  - NODE_ENV=production"
+
